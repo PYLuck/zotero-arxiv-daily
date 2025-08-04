@@ -1,3 +1,5 @@
+import time
+import requests
 import arxiv
 import argparse
 import os
@@ -16,21 +18,66 @@ from paper import ArxivPaper
 from llm import set_global_llm
 import feedparser
 
-def get_zotero_corpus(id:str,key:str) -> list[dict]:
-    zot = zotero.Zotero(id, 'user', key)
-    collections = zot.everything(zot.collections())
-    collections = {c['key']:c for c in collections}
-    corpus = zot.everything(zot.items(itemType='conferencePaper || journalArticle || preprint'))
-    corpus = [c for c in corpus if c['data']['abstractNote'] != '']
-    def get_collection_path(col_key:str) -> str:
-        if p := collections[col_key]['data']['parentCollection']:
-            return get_collection_path(p) + '/' + collections[col_key]['data']['name']
-        else:
-            return collections[col_key]['data']['name']
-    for c in corpus:
-        paths = [get_collection_path(col) for col in c['data']['collections']]
-        c['paths'] = paths
-    return corpus
+
+def get_zotero_corpus(id: str, key: str) -> list[dict]:
+    """获取Zotero文献库，带重试机制处理API超时"""
+    max_retries = 3
+    base_delay = 5  # 基础延迟时间（秒）
+    
+    for attempt in range(max_retries):
+        try:
+            logger.info(f"尝试获取Zotero数据 (第{attempt + 1}次/共{max_retries}次)...")
+            
+            zot = zotero.Zotero(id, 'user', key)
+            
+            # 获取集合信息，带重试
+            logger.info("获取Zotero集合信息...")
+            collections = zot.everything(zot.collections())
+            collections = {c['key']: c for c in collections}
+            
+            # 获取文献数据，带重试
+            logger.info("获取Zotero文献数据...")
+            corpus = zot.everything(zot.items(itemType='conferencePaper || journalArticle || preprint'))
+            corpus = [c for c in corpus if c['data']['abstractNote'] != '']
+            
+            def get_collection_path(col_key: str) -> str:
+                if p := collections[col_key]['data']['parentCollection']:
+                    return get_collection_path(p) + '/' + collections[col_key]['data']['name']
+                else:
+                    return collections[col_key]['data']['name']
+            
+            for c in corpus:
+                paths = [get_collection_path(col) for col in c['data']['collections']]
+                c['paths'] = paths
+            
+            logger.success(f"成功获取{len(corpus)}篇文献")
+            return corpus
+            
+        except requests.exceptions.HTTPError as e:
+            if "504" in str(e) or "Gateway Time-out" in str(e):
+                if attempt < max_retries - 1:
+                    delay = base_delay * (2 ** attempt)  # 指数退避
+                    logger.warning(f"Zotero API超时 (504错误)，{delay}秒后重试...")
+                    time.sleep(delay)
+                    continue
+                else:
+                    logger.error("Zotero API持续超时，已达到最大重试次数")
+                    raise Exception("Zotero API服务器超时，请稍后重试")
+            else:
+                logger.error(f"Zotero API错误: {e}")
+                raise
+        except Exception as e:
+            if attempt < max_retries - 1:
+                delay = base_delay * (2 ** attempt)
+                logger.warning(f"获取Zotero数据失败: {e}，{delay}秒后重试...")
+                time.sleep(delay)
+                continue
+            else:
+                logger.error(f"获取Zotero数据最终失败: {e}")
+                raise
+    
+    raise Exception("获取Zotero数据失败，已达到最大重试次数")
+
 
 def filter_corpus(corpus:list[dict], pattern:str) -> list[dict]:
     _,filename = mkstemp()
