@@ -174,11 +174,11 @@ if __name__ == '__main__':
 
     logger.info("Retrieving Zotero corpus...")
     corpus = get_zotero_corpus(args.zotero_id, args.zotero_key)
-    logger.info(f"Retrieved {len(corpus)} papers from Zotero.")
+    logger.info(f"Retrieved {len(corp} papers from Zotero.")
     if args.zotero_ignore:
         logger.info(f"Ignoring papers in:\n {args.zotero_ignore}...")
         corpus = filter_corpus(corpus, args.zotero_ignore)
-        logger.info(f"Remaining {len(corpus)} papers after filtering.")
+        logger.info(f"Remaining {len(corp} papers after filtering.")
     logger.info("Retrieving Arxiv papers...")
     papers = get_arxiv_paper(args.arxiv_query, args.debug)
     if len(papers) == 0:
@@ -186,11 +186,11 @@ if __name__ == '__main__':
         if not args.send_empty:
           exit(0)
     else:
-                if len(corpus) > 0:
+                if len(corp > 0:
                                 logger.info("Reranking papers...")
-                                papers = rerank_paper(papers, corpus)
+                                papers = rerank_paper(papers, corp
                 else:
-                                logger.warning("Zotero corpus is empty, skipping reranking...")us)
+                                logger.warning("Zotero corpus is empty, skipping reranking...")
         if args.max_paper_num != -1:
             papers = papers[:args.max_paper_num]
         if args.use_llm_api:
