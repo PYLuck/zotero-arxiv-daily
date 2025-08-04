@@ -188,7 +188,7 @@ if __name__ == '__main__':
     else:
                 if len(corpus) > 0:
                                 logger.info("Reranking papers...")
-                                papers = rerank_paper(papers, corpus
+                                papers = rerank_paper(papers, corpus)
                 else:
                                 logger.warning("Zotero corpus is empty, skipping reranking...")
         if args.max_paper_num != -1:
