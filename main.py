@@ -191,7 +191,7 @@ if __name__ == '__main__':
                                 papers = rerank_paper(papers, corpus)
                 else:
                                 logger.warning("Zotero corpus is empty, skipping reranking...")
-        if args.max_paper_num != -1:
+            if args.max_paper_num != -1:
             papers = papers[:args.max_paper_num]
         if args.use_llm_api:
             logger.info("Using OpenAI API as global LLM.")
